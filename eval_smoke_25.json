@@ -1,0 +1,55 @@
+{
+  "summary": {
+    "total_cases": 1,
+    "scored_cases": 0,
+    "unscored_cases": 1,
+    "score_0_100": null,
+    "partial_mean_0_100": null
+  },
+  "config": {
+    "provider": "gemini",
+    "model": "gemini-2.5-flash",
+    "judge_provider": "gemini",
+    "judge_model": "gemini-2.5-flash",
+    "max_steps": 8,
+    "dataset": "core"
+  },
+  "cases": [
+    {
+      "id": "E2",
+      "question": "Cloudflare cache purge có incident nào liên quan không? Một website CLB không thuộc FedRAMP có chắc bị ảnh hưởng không?",
+      "expected": "Incident wp49bp8bqo6c identified; update ban đầu nói non-FedRAMP không bị ảnh hưởng bởi incident này. Không khẳng định nguyên nhân lỗi website.",
+      "scenario": "normal",
+      "provider": "gemini",
+      "model": "gemini-2.5-flash",
+      "judge_provider": "gemini",
+      "judge_model": "gemini-2.5-flash",
+      "result": {
+        "status": "error",
+        "answer": "",
+        "trace": [
+          {
+            "event": "provider_error",
+            "step": 1,
+            "error": "RuntimeError",
+            "message": "Provider trả HTTP 404; kiểm tra model, key và quota."
+          }
+        ],
+        "usage": [],
+        "error": "RuntimeError: Provider trả HTTP 404; kiểm tra model, key và quota."
+      },
+      "grade": {
+        "score": null,
+        "status": "unscored",
+        "reason": "Run lỗi; chưa phân biệt được lỗi agent và hạ tầng.",
+        "mechanical": {
+          "violations": [],
+          "score_cap": 100,
+          "tool_calls": 0,
+          "tool_steps": 0
+        },
+        "judge_usage": {}
+      }
+    }
+  ]
+}
