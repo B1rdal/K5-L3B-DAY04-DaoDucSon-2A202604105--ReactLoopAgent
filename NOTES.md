@@ -11,8 +11,9 @@ MSSV: 2A202604105
 | V1 | Evidence prompt và reminder sau lỗi | eval_after.json | 83.18 |
 | V2 | Fallback trích xuất khi status chưa xác nhận | eval_round2.json | 78.86 |
 | V3 | Validation đọc incident được liên kết | eval_v3.json | 79.55 |
+| V4 | Chặn vòng lặp sửa nguồn, nhắc đủ toàn bộ URL | eval_v4_h6.json | H6 riêng: 75; chưa chạy toàn bộ |
 
-V0/V1 là vòng Bài 3–5 ban đầu; V2/V3 là các vòng thử nghiệm bổ sung. Giữ nguyên các report cũ; code hiện tại là V3. Các phần 1–5 dưới đây mô tả V0/V1, phần V2 và V3 ghi riêng thay đổi và kết quả tiếp theo.
+V0/V1 là vòng Bài 3–5 ban đầu; V2/V3/V4 là các vòng thử nghiệm bổ sung. Giữ nguyên các report cũ; code hiện tại là V4. Các phần 1–5 dưới đây mô tả V0/V1; mỗi phiên bản sau có mục riêng. Điểm H6 riêng của V4 không phải điểm toàn bộ suite.
 
 ## 1. V0 — Case được chọn
 
@@ -230,3 +231,38 @@ Chi phí tăng khoảng 37.5%, token tăng khoảng 50.7%; gồm ảnh hưởng 
 - Các case khác như A5/H3 giảm 20 điểm mỗi case; không đủ dữ liệu để gán mọi thay đổi cho code do nondeterminism của agent/judge. Cơ chế V2 còn giữ, không sửa fixtures/cases/scenarios/grading. V3 không được coi là thắng lợi toàn diện: cao hơn V2 rất ít, tốn nhiều token hơn và có một case không hoàn thành.
 
 SHA256 `agent.py` dùng cho V3: `E39E7EF70CFDD4031F8B86674AEEF16647E26F86AF70A32A72548D97BBDA93B3`. Các report V0/V1/V2 được giữ nguyên. Mọi phiên bản mới phải dùng report khác để không ghi đè lịch sử.
+
+### V3 — Kiểm tra online riêng H6 sau khi publish (12/11/2026)
+
+Theo yêu cầu chỉ chạy một case, dùng nguyên code V3 và cấu hình OpenRouter/GPT-4o-mini, max_steps=8. Lưu riêng `eval_v3_h6_check_20261112_112040.json`; không thay kết quả full-suite bằng single-case score.
+
+H6 tiếp tục 0/100, status `max_steps`. Step 3 đã đọc được incident gộp; step 4–8 lại luân phiên thiếu hai URL nguồn như full run V3. Có bằng chứng lỗi citation-revision loop lặp lại ở một lần kiểm tra bổ sung, nhưng không đánh giá lại độ ổn định toàn bộ suite. 8 model calls, 32,329 tokens, chi phí ghi nhận USD 0.00440925; không gọi judge vì runner chấm max_steps là 0. Chưa sửa code hoặc chạy thêm API sau test này.
+
+## 8. V4 — Giới hạn sửa nguồn một lần, giữ toàn bộ citations (12/11/2026)
+
+### Lỗi, thay đổi và offline regression
+
+V3 có hai lần H6 hết 8 model calls vì prompt sửa chỉ đưa các URL đang thiếu, khiến model bỏ nguồn cũ để thêm nguồn mới. V4 sửa prompt để yêu cầu giữ TOÀN BỘ `observed_urls`, giữ phần đúng trong answer. Chỉ yêu cầu model sửa nguồn một lần mỗi run. Nếu sau đó vẫn thiếu, agent append đúng những URL đã quan sát nhưng thiếu vào source list và ghi `validation_sources_appended`; không yêu cầu model sửa liên tục. Không bịa URL hoặc khẳng định tất cả claims được chứng minh chỉ vì có source list.
+
+Giữ contract cũ: nếu final thiếu nguồn ngay lần đầu và đã hết budget thì vẫn `max_steps`. Chỉ fallback append sau khi đã cho model một cơ hội sửa. Giữ nguyên linked-reference validation, evidence fallback và max_steps=8. Không sửa dataset, tests có sẵn hoặc grading.
+
+Thêm 3 tests offline trong `tests/test_source_revision.py`: hai URL luân phiên thiếu kết thúc sau đúng một revision; revision bỏ hết URL chỉ append các nguồn thực sự quan sát; revision đúng không cần append. Các test mới chặn network. Tổng 59 tests chính + 3 bonus agent tests = 62 pass; whitespace check pass. Tests source validation ban đầu vẫn pass.
+
+### Kiểm tra online chỉ H6
+
+File `eval_v4_h6.json`, provider/judge OpenRouter `openai/gpt-4o-mini`, snapshot core, max_steps=8; chỉ một case để tiết kiệm quota. Report V3 đầy đủ và H6 check cũ không bị ghi đè.
+
+| Chỉ số H6 | V3 check riêng | V4 check riêng |
+|---|---|---|
+| Status | max_steps | completed |
+| Điểm | 0 | 75 |
+| Agent calls | 8 | 5 |
+| Judge calls | 0 (max_steps chấm 0 bằng code) | 1 |
+| Tổng tokens được ghi | 32,329 | 18,737 |
+| Chi phí USD được ghi | 0.00440925 | 0.00281550 |
+
+V4 trace: step 1 đọc status và incident đầu; step 2 chặn final sớm vì chưa đọc reference; step 3 đọc incident gộp; step 4 thiếu URL incident đầu; step 5 model sửa và giữ đủ cả hai nguồn nên completed. Nhánh append không cần kích hoạt trong run này nhưng được kiểm tra offline. Hai tool steps, không có mechanical violation.
+
+Lỗi step-exhaustion không tái hiện trong check V4, H6 tăng 0 → 75. Judge còn trừ điểm vì giải thích nguyên nhân/ảnh hưởng và giới hạn dữ liệu chưa rõ; answer chưa nhấn mạnh update `truncated=true` và chưa giữ đủ phần status ban đầu khi sửa. Một lần H6 không chứng minh độ ổn định, không cho phép suy ra điểm cả 22 case hoặc bảo đảm không regression nơi khác. Chưa chạy full-suite V4 để tiết kiệm quota.
+
+SHA256 `agent.py` dùng cho V4: `497C8CA08A70F98AC35CFF37B446FCD30BDB053CD7BBB5F03C7EF1ADE52B32AA`. V4 là code hiện tại; `eval_v3.json` chỉ mô tả code V3 lịch sử.

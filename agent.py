@@ -100,6 +100,7 @@ def run_agent(question, provider, tools, max_steps=6):
     status_checks = {}
     referenced_incidents = set()
     attempted_incidents = set()
+    source_revision_requested = False
 
     for step in range(1, max_steps + 1):
         try:
@@ -233,16 +234,26 @@ def run_agent(question, provider, tools, max_steps=6):
                     'step': step,
                     'missing_urls': missing_urls,
                 })
+                if source_revision_requested:
+                    # One model revision is enough. Attach only URLs actually read,
+                    # keeping the latest answer instead of alternating revisions.
+                    answer += '\n\nNguồn incident đã đọc (bổ sung bởi agent):\n' + '\n'.join(
+                        '- ' + url for url in missing_urls)
+                    trace.append({'event': 'validation_sources_appended', 'step': step,
+                                  'urls': missing_urls})
+                    return _result('completed', answer, trace, usage)
                 if step == max_steps:
                     return _result('max_steps', answer, trace, usage)
                 messages.append({
                     'role': 'user',
                     'content': (
-                        'Hãy sửa câu trả lời vừa rồi để dẫn đúng URL nguồn incident '
-                        'đã quan sát sau đây, không thay đổi hoặc tự tạo URL: '
-                        + ', '.join(missing_urls)
+                        'Hãy sửa câu trả lời vừa rồi, giữ nguyên các phần đúng và '
+                        'giữ TOÀN BỘ URL nguồn incident đã đọc trong danh sách sau. '
+                        'Không thay thế URL này bằng URL khác, không tự tạo URL: '
+                        + ', '.join(sorted(observed_urls))
                     ),
                 })
+                source_revision_requested = True
                 continue
             return _result('completed', answer, trace, usage)
 
