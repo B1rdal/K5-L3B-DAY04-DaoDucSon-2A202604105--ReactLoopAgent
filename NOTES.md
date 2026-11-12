@@ -3,17 +3,19 @@
 Họ và tên: Đào Đức Sơn 
 MSSV: 2A202604105 
 
+Bản nộp cuối: V4 (`agent.py`), baseline `eval_before.json` = 76.59 và final `eval_after.json` = 83.50, cùng cấu hình; 22/22 case completed ở final. Report V1 cũ được đổi tên thành `eval_v1.json` để giữ lịch sử, không chỉnh dữ liệu bên trong. `eval_round2.json` và `eval_v3.json` giữ bằng chứng các thử nghiệm trung gian. Các smoke tests, backups và single-case checks được chuyển ra ngoài repo để gọn bản nộp; số liệu lịch sử của chúng vẫn được ghi bên dưới.
+
 ## Chỉ mục phiên bản
 
 | Phiên bản | Thay đổi | Report | Điểm |
 |---|---|---|---|
 | V0 | Agent loop và URL source validation ban đầu | eval_before.json | 76.59 |
-| V1 | Evidence prompt và reminder sau lỗi | eval_after.json | 83.18 |
+| V1 | Evidence prompt và reminder sau lỗi | eval_v1.json | 83.18 |
 | V2 | Fallback trích xuất khi status chưa xác nhận | eval_round2.json | 78.86 |
 | V3 | Validation đọc incident được liên kết | eval_v3.json | 79.55 |
-| V4 | Chặn vòng lặp sửa nguồn, nhắc đủ toàn bộ URL | eval_v4_h6.json | H6 riêng: 75; chưa chạy toàn bộ |
+| V4 | Chặn vòng lặp sửa nguồn, nhắc đủ toàn bộ URL (bản nộp) | eval_after.json | 83.50 |
 
-V0/V1 là vòng Bài 3–5 ban đầu; V2/V3/V4 là các vòng thử nghiệm bổ sung. Giữ nguyên các report cũ; code hiện tại là V4. Các phần 1–5 dưới đây mô tả V0/V1; mỗi phiên bản sau có mục riêng. Điểm H6 riêng của V4 không phải điểm toàn bộ suite.
+V0/V1 là vòng Bài 3–5 ban đầu; V2/V3/V4 là các vòng thử nghiệm bổ sung. Giữ nguyên các report cũ; code hiện tại là V4. Các phần 1–5 dưới đây mô tả V0/V1; mỗi phiên bản sau có mục riêng. Điểm H6 riêng của V4 không phải điểm toàn bộ suite. V4 có điểm full-suite cao nhất đã quan sát, không mặc định phiên bản mới hơn tốt hơn.
 
 ## 1. V0 — Case được chọn
 
@@ -57,7 +59,7 @@ A3 đạt 35/100 nhưng cần xem lại nhận xét judge: agent thực sự nó
 
 ## 4. V0 → V1 — So sánh hai lần chạy
 
-| Chỉ số | `eval_before.json` | `eval_after.json` |
+| Chỉ số | `eval_before.json` | `eval_v1.json` |
 |---|---|---|
 | Điểm tổng | 76.59/100 (22/22 được chấm) | 83.18/100 (22/22 được chấm), +6.59 điểm |
 | Điểm case đã chọn | H7: 45/100 | H7: 80/100, +35 điểm; lỗi vẫn còn trong answer |
@@ -93,7 +95,7 @@ Bài 5 đã chạy ngày 12/11/2026. Hai khối `config` giống nhau hoàn toà
 
 - Lỗi hạ tầng đã xử lý: A4 gặp HTTP 429 trong lần chạy OpenRouter; chạy lại case bằng `run_case` chính thức với cấu hình giữ nguyên, được 100/100. Summary được tạo lại bằng `summarize` chính thức; report gốc được sao lưu và report cuối ghi `execution_notes`. Không sửa tay điểm hay answer.
 - Các lần thử Gemini và smoke test là kiểm tra cấu hình riêng, không trộn vào kết quả OpenRouter. Chi phí trong bảng chỉ cộng usage ghi trong 22 case cuối, không bao gồm smoke tests, lần thử thất bại hoặc lần bị hủy.
-- Lần sau: H6 gặp API read timeout. Sao lưu report gốc, chạy lại chỉ case chưa chấm bằng `run_case` với cấu hình không đổi, rồi dùng `summarize` chính thức tạo summary; H6 được 60/100. `eval_after.json.execution_notes` ghi retry. Không chọn lại các case điểm thấp. Chi phí bảng chỉ gồm 22 kết quả cuối, không gồm usage của lần H6 lỗi bị thay thế; tổng chi phí tài khoản thực tế có thể cao hơn.
+- Lần sau: H6 gặp API read timeout. Sao lưu report gốc, chạy lại chỉ case chưa chấm bằng `run_case` với cấu hình không đổi, rồi dùng `summarize` chính thức tạo summary; H6 được 60/100. `eval_v1.json.execution_notes` ghi retry. Không chọn lại các case điểm thấp. Chi phí bảng chỉ gồm 22 kết quả cuối, không gồm usage của lần H6 lỗi bị thay thế; tổng chi phí tài khoản thực tế có thể cao hơn.
 - H7, bằng chứng sau cải tiến: trace có `get_status` Cloudflare trả `TimeoutError`, event `evidence_reminder` ở step 1, rồi model kết thúc step 2. Answer nói "Không thể kiểm tra trạng thái do lỗi Timeout" nhưng tiếp tục "Tuy nhiên, nếu chỉ dựa vào chính sách hiện tại, tôi sẽ coi nó đang **hoạt động**." Do đó tăng điểm judge không có nghĩa đã giải quyết lỗi; prompt-only chưa đủ để bảo đảm tính nhất quán của answer. Không sửa agent thêm sau eval này, để kết quả phản ánh đúng phiên bản Bài 4.
 - H1/H6 vẫn 60 vì chỉ gọi tools ở một model step, không đọc tiếp incident được liên kết; cần cải tiến ở vòng sau. A5 tăng lên 65 và có nhắc giới hạn 50 incident, nhưng vẫn nhầm giữa 5 mục được trả về và tổng số incident khớp, thiếu câu trả lời rõ ràng cho năm 2025. Các kết luận dựa snapshot vẫn bị gọi là "hiện tại" ở một số case.
 - Regressions: E1 giảm 20; answer dài hơn, dùng `updated_at` như thời gian giải quyết và không nêu rõ thời điểm snapshot. Judge cũng có nhận xét đáng tranh luận rằng chưa xác định rõ không có sự cố dù answer có nói điều đó. A2 giảm 25; đã nêu non-FedRAMP không bị ảnh hưởng bởi incident này nhưng chưa nói rõ điều đó không loại trừ mọi nguyên nhân cache khác. E4 giảm 5. Các thay đổi điểm có cả khác biệt answer và nhiễu judge.
@@ -105,11 +107,11 @@ Judge là ước lượng; A3 là ví dụ nhận xét có thể mâu thuẫn v�
 
 ## 6. V2 — Fallback khi status chưa xác nhận (12/11/2026)
 
-Giữ nguyên `eval_before.json` (76.59) và `eval_after.json` (83.18) làm bằng chứng vòng đầu; code V2 được đánh giá bằng `eval_round2.json`, không phải phiên bản tạo `eval_after.json`. Code hiện tại đã tiếp tục lên V3, mô tả ở phần sau.
+Giữ nguyên `eval_before.json` (76.59) và `eval_v1.json` (83.18) làm bằng chứng vòng đầu; code V2 được đánh giá bằng `eval_round2.json`, không phải phiên bản tạo `eval_v1.json`. Các phiên bản tiếp theo được mô tả ở phần sau; code nộp cuối là V4.
 
 ### Vấn đề và thay đổi
 
-H7 trong `eval_after.json` vẫn nói coi Cloudflare đang hoạt động dù tool timeout. Vì prompt-only chưa đủ, thêm `_partial_status_answer` và theo dõi từng status query trong `agent.py`. Nếu đến final vẫn còn status query lỗi chưa được retry thành công, thay candidate answer bằng báo cáo trích xuất: các trường provider/captured_at/overall/components/source từ status thành công; query lỗi được ghi rõ chưa xác nhận; URL incident thành công vẫn giữ. Không dùng câu trả lời tự do có thể chứa kết luận mâu thuẫn. Event `validation_unresolved_status` giữ candidate bị loại để debug và ghi action `extractive_fallback`.
+H7 trong `eval_v1.json` vẫn nói coi Cloudflare đang hoạt động dù tool timeout. Vì prompt-only chưa đủ, thêm `_partial_status_answer` và theo dõi từng status query trong `agent.py`. Nếu đến final vẫn còn status query lỗi chưa được retry thành công, thay candidate answer bằng báo cáo trích xuất: các trường provider/captured_at/overall/components/source từ status thành công; query lỗi được ghi rõ chưa xác nhận; URL incident thành công vẫn giữ. Không dùng câu trả lời tự do có thể chứa kết luận mâu thuẫn. Event `validation_unresolved_status` giữ candidate bị loại để debug và ghi action `extractive_fallback`.
 
 Retry chỉ thay thế query có cùng tool name và arguments, vì thành công cho component khác không chứng minh phần bị lỗi đã hồi phục. Không thêm model call hoặc sleep/retry vào agent; không hard-code incident IDs hay câu trả lời eval. Fallback là chính sách bảo thủ: có thể kích hoạt dù candidate đã đúng, và giảm độ chi tiết của báo cáo khi chỉ kiểm tra được một phần. Nó chỉ xử lý các status query đã thực sự gọi và lỗi; không đảm bảo mọi claim trong câu trả lời thông thường đều có bằng chứng.
 
@@ -123,7 +125,7 @@ Agent/judge đều `openrouter` / `openai/gpt-4o-mini`, core snapshot, max_steps
 
 | Chỉ số | Baseline | Prompt + reminder | Fallback mới |
 |---|---|---|---|
-| File | eval_before.json | eval_after.json | eval_round2.json |
+| File | eval_before.json | eval_v1.json | eval_round2.json |
 | Case được chấm | 22/22 | 22/22 | 22/22 |
 | Điểm | 76.59 | 83.18 | 78.86 |
 | H7 | 45 | 80 | 70 |
@@ -266,3 +268,50 @@ V4 trace: step 1 đọc status và incident đầu; step 2 chặn final sớm v�
 Lỗi step-exhaustion không tái hiện trong check V4, H6 tăng 0 → 75. Judge còn trừ điểm vì giải thích nguyên nhân/ảnh hưởng và giới hạn dữ liệu chưa rõ; answer chưa nhấn mạnh update `truncated=true` và chưa giữ đủ phần status ban đầu khi sửa. Một lần H6 không chứng minh độ ổn định, không cho phép suy ra điểm cả 22 case hoặc bảo đảm không regression nơi khác. Chưa chạy full-suite V4 để tiết kiệm quota.
 
 SHA256 `agent.py` dùng cho V4: `497C8CA08A70F98AC35CFF37B446FCD30BDB053CD7BBB5F03C7EF1ADE52B32AA`. V4 là code hiện tại; `eval_v3.json` chỉ mô tả code V3 lịch sử.
+
+### V4 — Full-suite online sau kiểm tra H6 (12/11/2026)
+
+Theo yêu cầu chạy toàn bộ, giữ nguyên code V4 và tất cả config OpenRouter/GPT-4o-mini, max_steps=8, core snapshot; lưu `eval_after.json`. 22/22 case được chấm, cả 22 status `completed`, không max_steps, không unscored, không cần retry hạ tầng. Điểm 83.50/100, thấp nhất 65: tất cả case đều trên 10/100. H6 đạt 75 ở cả single-case check lẫn full run, không tái hiện vòng lặp citation ở hai lần kiểm tra V4 này.
+
+So với V3 (79.55): +3.95 điểm. So với V1 (83.18): +0.32; so với baseline V0 (76.59): +6.91. Đây là quan sát từng run, không đủ để khẳng định cải thiện ổn định. H1 giảm 80 → 77, A3 giảm 100 → 75, các case vẫn còn điểm trừ; không diễn giải tất cả 22 case đã hoàn hảo.
+
+55 agent calls + 22 judge calls; tổng 108,780 tokens; chi phí usage USD 0.02182710 (không gồm check H6 riêng hoặc các vòng trước). So với V3: bớt 4 agent calls, bớt 17,280 tokens, chi phí giảm USD 0.00244110. Code hash khớp V4 đã test offline, không sửa code trong khi eval.
+
+| Case | V4 full |
+|---|---|
+| E1 | 75 |
+| E2 | 75 |
+| E3 | 75 |
+| E4 | 100 |
+| E5 | 75 |
+| E6 | 65 |
+| A1 | 85 |
+| A2 | 100 |
+| A3 | 75 |
+| A4 | 100 |
+| A5 | 65 |
+| A6 | 75 |
+| A7 | 85 |
+| A8 | 90 |
+| H1 | 77 |
+| H2 | 100 |
+| H3 | 100 |
+| H4 | 100 |
+| H5 | 100 |
+| H6 | 75 |
+| H7 | 70 |
+| H8 | 75 |
+
+H6 full trace: step 2 yêu cầu đọc reference, step 3 đọc incident gộp, step 4 thiếu URL đầu và yêu cầu giữ toàn bộ nguồn; sau đó completed. Không phải tăng max_steps hoặc bỏ kiểm tra nguồn để tránh điểm 0. Các report lịch sử được giữ nguyên; không gộp điểm single-case vào full-suite.
+
+
+## Kiểm tra bản nộp cuối
+
+Khôi phục đúng code V4 theo SHA256 `497C8CA08A70F98AC35CFF37B446FCD30BDB053CD7BBB5F03C7EF1ADE52B32AA`; không thay đổi score/answer trong các reports. Cần dùng `eval_after.json` hiện tại để đối chiếu code V4, còn `eval_v1.json` là kết quả V1 lịch sử trong phần Bài 3–5 đầu tiên.
+
+- Đủ `agent.py`, `eval_before.json`, `eval_after.json`, và NOTES có thông tin cá nhân cùng phân tích 5 mục và lịch sử phiên bản.
+- Baseline/final cùng config; mỗi report 22/22 case được chấm, score khác null; final V4 có 22 completed, score 83.50.
+- Sau cleanup: 59 tests chính + 3 bonus agent tests pass (62 tổng), `git diff --check` pass. Bonus tests chỉ kiểm tra tương thích; chưa nộp điểm bonus vì không có full `eval_bonus.json`.
+- Không xóa file starter của bản assignment được clone. Fixtures, cases, scenarios và grading không bị thay đổi trong cleanup. Chỉ chuyển generated trial outputs/backups ra ngoài repo và bỏ thử nghiệm không chọn làm bản nộp.
+- Chỉ có `.env.example` ở repo; không có secret theo pattern scan. Key mã hóa lưu ngoài repository, không nộp.
+- Repo public truy cập được không đăng nhập. Cần commit/push cleanup, chỉnh tên repository bỏ dấu `--` trước ReactLoopAgent thành `-` theo mẫu và nộp link LMS đúng hạn. Chưa xác minh thao tác nộp LMS hoặc deadline theo ca học.
